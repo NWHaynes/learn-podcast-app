@@ -1,8 +1,8 @@
-// Vercel-compatible API endpoint
+// Vercel-compatible API endpoint with debugging
 import { Anthropic } from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 
-// Initialize AI clients
+// Initialize AI clients at module level
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -168,10 +168,6 @@ Provide just the title, nothing else.
   }
 }
 
-// Vercel-compatible API endpoint with debugging
-import { Anthropic } from '@anthropic-ai/sdk';
-import OpenAI from 'openai';
-
 // Main handler function
 async function handleRequest(req, res) {
   // Enable CORS
@@ -191,12 +187,6 @@ async function handleRequest(req, res) {
     });
   }
 
-  // Debug: Check if API keys exist
-  console.log('OpenAI key exists:', !!process.env.OPENAI_API_KEY);
-  console.log('Anthropic key exists:', !!process.env.ANTHROPIC_API_KEY);
-  console.log('OpenAI key starts with:', process.env.OPENAI_API_KEY?.substring(0, 5));
-  console.log('Anthropic key starts with:', process.env.ANTHROPIC_API_KEY?.substring(0, 8));
-
   const { query, clarificationAnswers } = req.body;
 
   if (!query || query.trim().length < 10) {
@@ -208,29 +198,6 @@ async function handleRequest(req, res) {
 
   try {
     console.log('Processing request for:', query);
-    
-    // Initialize AI clients with error handling
-    let anthropic, openai;
-    
-    try {
-      anthropic = new Anthropic({
-        apiKey: process.env.ANTHROPIC_API_KEY,
-      });
-      console.log('Anthropic client initialized successfully');
-    } catch (error) {
-      console.error('Anthropic initialization error:', error);
-      throw new Error('Failed to initialize Anthropic client');
-    }
-
-    try {
-      openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
-      console.log('OpenAI client initialized successfully');
-    } catch (error) {
-      console.error('OpenAI initialization error:', error);
-      throw new Error('Failed to initialize OpenAI client');
-    }
     
     // Step 1: Research Phase
     console.log('Phase 1: Starting research...');
