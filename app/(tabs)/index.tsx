@@ -62,7 +62,7 @@ export default function ChatScreen() {
       // Step 3: API Call
       setProcessingStep('🧠 AI agents working together...');
       
-      const response = await fetch('https://your-vercel-url.vercel.app/api/generate-story', {
+      const response = await fetch('https://learn-podcast.vercel.app/api/generate-story', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
