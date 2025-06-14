@@ -12,7 +12,7 @@ const openai = new OpenAI({
 });
 
 // Research function using Claude
-async function conductResearch(query) {
+async function conductResearch(query, anthropic) {
   try {
     console.log('Starting research for:', query);
     
@@ -66,7 +66,7 @@ Make sure to include specific examples, numbers, dates, and concrete details tha
 }
 
 // Story generation function using ChatGPT
-async function generateStory(research, originalQuery) {
+async function generateStory(research, originalQuery, clarificationAnswers, openai) {
   try {
     console.log('Generating story from research...');
     
@@ -75,10 +75,16 @@ You are a master storyteller and podcast host. Transform the following research 
 
 ORIGINAL QUESTION: "${originalQuery}"
 
+USER'S CLARIFICATION ANSWERS: "${clarificationAnswers || 'No additional context provided'}"
+
 RESEARCH DATA:
 ${research}
 
-Create a compelling 10-15 minute narrative (approximately 2,500-3,000 words) with these requirements:
+Create a compelling 10-15 minute narrative (approximately 2,500-3,000 words) that specifically addresses the user's clarifications and interests. Use their answers to:
+- Focus on the aspects they're most curious about
+- Adjust the depth and complexity appropriately
+- Include the specific angles or perspectives they requested
+- Structure the content in the format they prefer
 
 STRUCTURE:
 1. HOOK (First 30 seconds): Start with a surprising fact, intriguing question, or fascinating scenario that immediately grabs attention
@@ -162,6 +168,10 @@ Provide just the title, nothing else.
   }
 }
 
+// Vercel-compatible API endpoint with debugging
+import { Anthropic } from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
+
 // Main handler function
 async function handleRequest(req, res) {
   // Enable CORS
@@ -181,7 +191,13 @@ async function handleRequest(req, res) {
     });
   }
 
-  const { query } = req.body;
+  // Debug: Check if API keys exist
+  console.log('OpenAI key exists:', !!process.env.OPENAI_API_KEY);
+  console.log('Anthropic key exists:', !!process.env.ANTHROPIC_API_KEY);
+  console.log('OpenAI key starts with:', process.env.OPENAI_API_KEY?.substring(0, 5));
+  console.log('Anthropic key starts with:', process.env.ANTHROPIC_API_KEY?.substring(0, 8));
+
+  const { query, clarificationAnswers } = req.body;
 
   if (!query || query.trim().length < 10) {
     return res.status(400).json({ 
@@ -193,9 +209,32 @@ async function handleRequest(req, res) {
   try {
     console.log('Processing request for:', query);
     
+    // Initialize AI clients with error handling
+    let anthropic, openai;
+    
+    try {
+      anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      });
+      console.log('Anthropic client initialized successfully');
+    } catch (error) {
+      console.error('Anthropic initialization error:', error);
+      throw new Error('Failed to initialize Anthropic client');
+    }
+
+    try {
+      openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+      console.log('OpenAI client initialized successfully');
+    } catch (error) {
+      console.error('OpenAI initialization error:', error);
+      throw new Error('Failed to initialize OpenAI client');
+    }
+    
     // Step 1: Research Phase
     console.log('Phase 1: Starting research...');
-    const researchResult = await conductResearch(query);
+    const researchResult = await conductResearch(query, anthropic);
     
     if (!researchResult.success) {
       throw new Error(`Research failed: ${researchResult.error}`);
@@ -203,7 +242,7 @@ async function handleRequest(req, res) {
 
     // Step 2: Story Generation Phase
     console.log('Phase 2: Generating story...');
-    const storyResult = await generateStory(researchResult.research, query);
+    const storyResult = await generateStory(researchResult.research, query, clarificationAnswers, openai);
     
     if (!storyResult.success) {
       throw new Error(`Story generation failed: ${storyResult.error}`);
